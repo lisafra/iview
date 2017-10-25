@@ -3,7 +3,8 @@
         <ul :class="classes">
             <li>
                 <span :class="arrowClasses" @click="handleExpand">
-                    <Icon type="arrow-right-b"></Icon>
+                    <Icon v-if="showArrow" type="arrow-right-b"></Icon>
+                    <Icon v-if="showLoading" type="load-c" class="ivu-load-loop"></Icon>
                 </span>
                 <Checkbox
                         v-if="showCheckbox"
@@ -15,8 +16,8 @@
                 <span v-else :class="titleClasses" v-html="data.title" @click="handleSelect"></span>
                 <Tree-node
                         v-if="data.expand"
-                        v-for="item in data.children"
-                        :key="item.nodeKey"
+                        v-for="(item, i) in data.children"
+                        :key="i"
                         :data="item"
                         :multiple="multiple"
                         :show-checkbox="showCheckbox">
@@ -31,6 +32,7 @@
     import Render from '../base/render';
     import CollapseTransition from '../base/collapse-transition';
     import Emitter from '../../mixins/emitter';
+    import { findComponentUpward } from '../../utils/assist';
 
     const prefixCls = 'ivu-tree';
 
@@ -59,6 +61,9 @@
                 prefixCls: prefixCls
             };
         },
+        watch: {
+
+        },
         computed: {
             classes () {
                 return [
@@ -77,8 +82,7 @@
                     `${prefixCls}-arrow`,
                     {
                         [`${prefixCls}-arrow-disabled`]: this.data.disabled,
-                        [`${prefixCls}-arrow-open`]: this.data.expand,
-                        [`${prefixCls}-arrow-hidden`]: !(this.data.children && this.data.children.length)
+                        [`${prefixCls}-arrow-open`]: this.data.expand
                     }
                 ];
             },
@@ -89,13 +93,39 @@
                         [`${prefixCls}-title-selected`]: this.data.selected
                     }
                 ];
+            },
+            showArrow () {
+                return (this.data.children && this.data.children.length) || ('loading' in this.data && !this.data.loading);
+            },
+            showLoading () {
+                return 'loading' in this.data && this.data.loading;
             }
         },
         methods: {
             handleExpand () {
-                if (this.data.disabled) return;
-                this.$set(this.data, 'expand', !this.data.expand);
-                this.dispatch('Tree', 'toggle-expand', this.data);
+                const item = this.data;
+                if (item.disabled) return;
+
+                // async loading
+                if (item.children.length === 0) {
+                    const tree = findComponentUpward(this, 'Tree');
+                    if (tree && tree.loadData) {
+                        this.$set(this.data, 'loading', true);
+                        tree.loadData(item, children => {
+                            this.$set(this.data, 'loading', false);
+                            if (children.length) {
+                                this.$set(this.data, 'children', children);
+                                this.$nextTick(() => this.handleExpand());
+                            }
+                        });
+                        return;
+                    }
+                }
+
+                if (item.children && item.children.length) {
+                    this.$set(this.data, 'expand', !this.data.expand);
+                    this.dispatch('Tree', 'toggle-expand', this.data);
+                }
             },
             handleSelect () {
                 if (this.data.disabled) return;

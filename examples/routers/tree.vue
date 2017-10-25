@@ -1,6 +1,6 @@
 <template>
     <div>
-        <Tree :data="baseData" show-checkbox multiple></Tree>
+        <Tree :data="baseData" :load-data="loadData" show-checkbox multiple></Tree>
         <Button @click="handleAdd">add</Button>
         <Button @click="handleUpdate">update</Button>
     </div>
@@ -16,18 +16,9 @@
                         children: [
                             {
                                 title: 'parent 1-0',
-                                expand: true,
-                                disabled: true,
-                                children: [
-                                    {
-                                        title: 'leaf',
-                                        disableCheckbox: true
-                                    },
-                                    {
-                                        title: 'leaf',
-                                        checked: false
-                                    }
-                                ]
+                                expand: false,
+                                children: [],
+                                loading: false
                             },
                             {
                                 title: 'parent 1-1',
@@ -43,11 +34,11 @@
                                                     size: 'small'
                                                 },
                                                 on: {
-                                                    click: () => {
-                                                        this.cc();
+                                                    click: ({target}) => {
+                                                        this.logger(target.textContent);
                                                     }
                                                 }
-                                            }, '我是按钮')
+                                            }, 'I\'m a button!');
                                         }
                                     }
                                 ]
@@ -55,7 +46,7 @@
                         ]
                     }
                 ]
-            }
+            };
         },
         methods: {
             handleAdd () {
@@ -64,14 +55,33 @@
                         title: 'test name',
                         checked: true
                     }
-                )
+                );
             },
             handleUpdate () {
-                this.$set(this.baseData[0].children[0].children[1], 'checked', true);
+                const child = this.baseData[0].children[0].children[1];
+              //  console.log(JSON.stringify(this.baseData), '\n', JSON.stringify(child));
+                if (!child) return this.$Message.error('Node is async and is not loaded yet');
+                else this.$set(child, 'checked', true);
             },
-            cc () {
-                console.log(99)
+            logger (txt) {
+                console.log(txt);
+            },
+            loadData (item, callback) {
+                setTimeout(() => {
+                    callback([
+                        {
+                            title: 'children-1',
+                            loading: false,
+                            children: []
+                        },
+                        {
+                            title: 'children-2',
+                            loading: false,
+                            children: []
+                        }
+                    ]);
+                }, 2000);
             }
         }
-    }
+    };
 </script>
